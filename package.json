@@ -1,0 +1,23 @@
+{
+  "name": "sender-check-backend",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000s\u0000e\u0000n\u0000d\u0000e\u0000r\u0000-\u0000c\u0000h\u0000e\u0000c\u0000k\u0000-\u0000b\u0000a\u0000c\u0000k\u0000e\u0000n\u0000d\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/osm-alt/sender-check-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/osm-alt/sender-check-backend/issues"
+  },
+  "homepage": "https://github.com/osm-alt/sender-check-backend#readme",
+  "dependencies": {
+    "mongodb": "^4.13.0"
+  }
+}
