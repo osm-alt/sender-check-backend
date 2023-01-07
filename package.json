@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/osm-alt/sender-check-backend#readme",
   "dependencies": {
+    "dotenv": "^16.0.3",
     "mongodb": "^4.13.0"
   }
 }
