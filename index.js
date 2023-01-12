@@ -33,7 +33,7 @@ app.post("/users", async (req, res) => {
     const hashedPassword = await bcrypt.hash(req.body.password, 10); //hash password with a generated salt
     const user = { user_email: req.body.user_email, password: hashedPassword };
     const users = database.collection("users");
-    users.insertOne(user);
+    await users.insertOne(user);
     res.status(201).send();
   } catch {
     res.status(500).send();
@@ -57,8 +57,6 @@ app.post("/users/login", async (req, res) => {
     user_email: req.body.user_email,
   });
 
-  console.log(user);
-
   if (user == null) {
     return res.status(400).send("Incorrect email or password");
   }
@@ -76,20 +74,13 @@ app.post("/users/login", async (req, res) => {
 app.get("/", async (req, res) => {
   const trusted_senders = database.collection("trusted_senders");
 
-  try {
-    const query = {
-      user_email: "osm@hotmail.com",
-    };
-    const trusted_senders = await trusted_senders.findOne(query);
+  const query = {
+    user_email: "osm@hotmail.com",
+  };
+  trusted_senders = await trusted_senders.findOne(query);
 
-    console.log(trusted_senders);
-    res.send(trusted_senders);
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
+  res.send(trusted_senders);
 });
-async function run() {}
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
