@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const Joi = require("joi");
+const jwt = require("jsonwebtoken");
 
 const bcrypt = require("bcrypt");
 
@@ -22,7 +23,7 @@ app.post("/users", async (req, res) => {
     const schema = Joi.object({
       first_name: Joi.string().required().max(25),
       last_name: Joi.string().required().max(30),
-      user_email: Joi.string().email().required(),
+      user_email: Joi.string().email().required().max(100),
       password: Joi.string().required().min(5).max(50),
     });
 
@@ -31,7 +32,12 @@ app.post("/users", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(req.body.password, 10); //hash password with a generated salt
-    const user = { user_email: req.body.user_email, password: hashedPassword };
+    const user = {
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      user_email: req.body.user_email,
+      password: hashedPassword,
+    };
     const users = database.collection("users");
     await users.insertOne(user);
     res.status(201).send();
@@ -62,13 +68,56 @@ app.post("/users/login", async (req, res) => {
   }
   try {
     if (await bcrypt.compare(req.body.password, user.password)) {
-      res.send("Success");
+      const accessToken = generateAccessToken({ user_email: user.user_email });
+      const refreshToken = jwt.sign(
+        user.user_email,
+        process.env.REFRESH_TOKEN_SECRET
+      );
+      const refresh_tokens = database.collection("refresh_tokens");
+      await refresh_tokens.insertOne({ refresh_token: refreshToken });
+      res.json({ accessToken: accessToken, refreshToken: refreshToken });
     } else {
-      res.send("Incorrect email or password");
+      res.status(400).send("Incorrect email or password");
     }
   } catch {
     res.status(500).send();
   }
+});
+
+app.post("/token", async (req, res) => {
+  //schema for expected input and validation
+  const schema = Joi.object({
+    refresh_token: Joi.string().required(),
+  });
+
+  if (!validateSchema(schema, req, res)) {
+    return;
+  }
+  const refreshToken = req.body.refresh_token;
+  if (refreshToken == null) return res.sendStatus(401);
+
+  const refresh_tokens = database.collection("refresh_tokens");
+  const result = await refresh_tokens.findOne({ refresh_token: refreshToken });
+  if (result == null) return res.sendStatus(403);
+  jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    const accessToken = generateAccessToken({ user_email: user.user_email });
+    res.json({ access_token: accessToken });
+  });
+});
+
+app.delete("/logout", async (req, res) => {
+  const schema = Joi.object({
+    refresh_token: Joi.string().required(),
+  });
+
+  if (!validateSchema(schema, req, res)) {
+    return;
+  }
+
+  const refresh_tokens = database.collection("refresh_tokens");
+  await refresh_tokens.deleteOne({ refresh_token: req.body.refresh_token });
+  res.sendStatus(204);
 });
 
 app.get("/", async (req, res) => {
@@ -82,9 +131,6 @@ app.get("/", async (req, res) => {
   res.send(trusted_senders);
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Listening on port ${port}...`));
-
 function validateSchema(schema, req, res) {
   const result = schema.validate(req.body);
 
@@ -94,3 +140,12 @@ function validateSchema(schema, req, res) {
   }
   return true;
 }
+
+function generateAccessToken(user_email) {
+  return jwt.sign(user_email, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: "15m",
+  });
+}
+
+const port = process.env.PORT || 4000;
+app.listen(port, () => console.log(`Listening on port ${port}...`));
