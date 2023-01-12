@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
+const xss = require("xss");
 
 const bcrypt = require("bcrypt");
 
@@ -33,9 +34,9 @@ app.post("/users", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(req.body.password, 10); //hash password with a generated salt
     const user = {
-      first_name: req.body.first_name,
-      last_name: req.body.last_name,
-      user_email: req.body.user_email,
+      first_name: xss(req.body.first_name),
+      last_name: xss(req.body.last_name),
+      user_email: xss(req.body.user_email),
       password: hashedPassword,
     };
     const users = database.collection("users");
