@@ -15,6 +15,7 @@ const client = new MongoClient(uri);
 
 const database = client.db("SenderCheck");
 
+//Register user
 app.post("/users", async (req, res) => {
   try {
     //schema for expected input and validation
@@ -22,13 +23,10 @@ app.post("/users", async (req, res) => {
       first_name: Joi.string().required().max(25),
       last_name: Joi.string().required().max(30),
       user_email: Joi.string().email().required(),
-      password: Joi.string().required(),
+      password: Joi.string().required().min(5).max(50),
     });
 
-    const result = schema.validate(req.body);
-
-    if (result.error) {
-      res.status(400).send(result.error);
+    if (!validateSchema(schema, req, res)) {
       return;
     }
 
@@ -37,6 +35,39 @@ app.post("/users", async (req, res) => {
     const users = database.collection("users");
     users.insertOne(user);
     res.status(201).send();
+  } catch {
+    res.status(500).send();
+  }
+});
+
+//Login
+app.post("/users/login", async (req, res) => {
+  //schema for expected input and validation
+  const schema = Joi.object({
+    user_email: Joi.string().email().required(),
+    password: Joi.string().required().min(5).max(50),
+  });
+
+  if (!validateSchema(schema, req, res)) {
+    return;
+  }
+
+  const users = database.collection("users");
+  const user = await users.findOne({
+    user_email: req.body.user_email,
+  });
+
+  console.log(user);
+
+  if (user == null) {
+    return res.status(400).send("Incorrect email or password");
+  }
+  try {
+    if (await bcrypt.compare(req.body.password, user.password)) {
+      res.send("Success");
+    } else {
+      res.send("Incorrect email or password");
+    }
   } catch {
     res.status(500).send();
   }
@@ -62,3 +93,13 @@ async function run() {}
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
+
+function validateSchema(schema, req, res) {
+  const result = schema.validate(req.body);
+
+  if (result.error) {
+    res.status(400).send(result.error);
+    return false;
+  }
+  return true;
+}
