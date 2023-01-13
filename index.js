@@ -35,12 +35,15 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     sender_email.lastIndexOf("@")
   );
   const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+  const list_owner = req.body.list_owner;
 
   const trusted_senders = database.collection("trusted_senders");
+  let trusted_sender_in_doc = "senders_and_emails." + sender_name;
   let result = await trusted_senders.findOne({
     user_email: list_owner,
-    senders_and_emails: { [sender_name]: { $exists: true } }, //check if the sender's name is in the list
+    [trusted_sender_in_doc]: { $exists: true }, //check if the sender's name is in the list
   });
+
   if (result != null) {
     if (
       list_owner === calling_user ||
@@ -54,57 +57,57 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     }
   }
 
-  const untrusted_senders = database.collection("untrusted_senders");
-  result = await untrusted_senders.findOne({
-    user_email: list_owner,
-    senders_and_emails: { [sender_name]: { $exists: true } }, //check if the sender's name is in the list
-  });
-  if (result != null) {
-    if (
-      list_owner === calling_user ||
-      result.users_with_access.includes(calling_user)
-    ) {
-      if (result.senders_and_emails[sender_name].includes(sender_email)) {
-        return res.status(200).send("Untrusted");
-      }
-    } else {
-      return res.status(401).send("You do not have access to this list"); //unauthorized
-    }
-  }
+  // const untrusted_senders = database.collection("untrusted_senders");
+  // result = await untrusted_senders.findOne({
+  //   user_email: list_owner,
+  //   senders_and_emails: { [sender_name]: { $exists: true } }, //check if the sender's name is in the list
+  // });
+  // if (result != null) {
+  //   if (
+  //     list_owner === calling_user ||
+  //     result.users_with_access.includes(calling_user)
+  //   ) {
+  //     if (result.senders_and_emails[sender_name].includes(sender_email)) {
+  //       return res.status(200).send("Untrusted");
+  //     }
+  //   } else {
+  //     return res.status(401).send("You do not have access to this list"); //unauthorized
+  //   }
+  // }
 
-  const trusted_domains = database.collection("trusted_domains");
-  result = await trusted_domains.findOne({
-    user_email: list_owner,
-  });
-  if (result != null) {
-    if (
-      list_owner === calling_user ||
-      result.users_with_access.includes(calling_user)
-    ) {
-      if (result.domains.includes(sender_email_domain)) {
-        return res.status(200).send("Trusted");
-      }
-    } else {
-      return res.status(401).send("You do not have access to this list"); //unauthorized
-    }
-  }
+  // const trusted_domains = database.collection("trusted_domains");
+  // result = await trusted_domains.findOne({
+  //   user_email: list_owner,
+  // });
+  // if (result != null) {
+  //   if (
+  //     list_owner === calling_user ||
+  //     result.users_with_access.includes(calling_user)
+  //   ) {
+  //     if (result.domains.includes(sender_email_domain)) {
+  //       return res.status(200).send("Trusted");
+  //     }
+  //   } else {
+  //     return res.status(401).send("You do not have access to this list"); //unauthorized
+  //   }
+  // }
 
-  const untrusted_domains = database.collection("unrusted_domains");
-  result = await untrusted_domains.findOne({
-    user_email: list_owner,
-  });
-  if (result != null) {
-    if (
-      list_owner === calling_user ||
-      result.users_with_access.includes(calling_user)
-    ) {
-      if (result.domains.includes(sender_email_domain)) {
-        return res.status(200).send("Trusted");
-      }
-    } else {
-      return res.status(401).send("You do not have access to this list"); //unauthorized
-    }
-  }
+  // const untrusted_domains = database.collection("unrusted_domains");
+  // result = await untrusted_domains.findOne({
+  //   user_email: list_owner,
+  // });
+  // if (result != null) {
+  //   if (
+  //     list_owner === calling_user ||
+  //     result.users_with_access.includes(calling_user)
+  //   ) {
+  //     if (result.domains.includes(sender_email_domain)) {
+  //       return res.status(200).send("Trusted");
+  //     }
+  //   } else {
+  //     return res.status(401).send("You do not have access to this list"); //unauthorized
+  //   }
+  // }
 
   return res.sendStatus(404);
 });
