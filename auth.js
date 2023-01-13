@@ -43,6 +43,10 @@ router.post("/users", async (req, res) => {
       password: hashedPassword,
     };
     const users = database.collection("users");
+    const result = await users.findOne({ user_email: user.user_email });
+    if (result != null) {
+      return res.status(400).send("User already exists");
+    }
     await users.insertOne(user);
     res.status(201).send();
   } catch {
@@ -79,7 +83,7 @@ router.post("/users/login", async (req, res) => {
       );
       const refresh_tokens = database.collection("refresh_tokens");
       await refresh_tokens.insertOne({ refresh_token: refreshToken });
-      res.json({ accessToken: accessToken, refreshToken: refreshToken });
+      res.json({ access_token: accessToken, refresh_token: refreshToken });
     } else {
       res.status(400).send("Incorrect email or password");
     }
@@ -103,11 +107,15 @@ router.post("/token", async (req, res) => {
   const refresh_tokens = database.collection("refresh_tokens");
   const result = await refresh_tokens.findOne({ refresh_token: refreshToken });
   if (result == null) return res.sendStatus(403);
-  jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    const accessToken = generateAccessToken({ user_email: user.user_email });
-    res.json({ access_token: accessToken });
-  });
+  jwt.verify(
+    refreshToken,
+    process.env.REFRESH_TOKEN_SECRET,
+    (err, user_email) => {
+      if (err) return res.sendStatus(403);
+      const accessToken = generateAccessToken({ user_email: user_email });
+      res.json({ access_token: accessToken });
+    }
+  );
 });
 
 router.delete("/logout", async (req, res) => {
