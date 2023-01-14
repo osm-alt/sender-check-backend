@@ -137,6 +137,53 @@ app.get("/trusted_senders", authenticateToken, async (req, res) => {
   return res.sendStatus(500);
 });
 
+//add a trusted senders to your list
+app.post("/trusted_senders", authenticateToken, async (req, res) => {
+  const schema = Joi.object({
+    sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
+    sender_email: Joi.string().required().email().max(100),
+  });
+
+  if (!auth.validateSchema(schema, req, res)) {
+    return;
+  }
+
+  const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+  const trusted_senders = database.collection("trusted_senders");
+
+  let result = await trusted_senders.findOne({ user_email: calling_user });
+
+  if (result == null) {
+    return res.sendStatus(400);
+  }
+
+  const sender_name = xss(req.body.sender_name);
+  const sender_email = xss(req.body.sender_email);
+
+  let senders_and_emails = result.senders_and_emails;
+
+  if (senders_and_emails[sender_name]) {
+    if (senders_and_emails[sender_name].includes(sender_email)) {
+      return res.status(400).send("The email for that sender already exists");
+    } else {
+      senders_and_emails[sender_name].push(sender_email);
+      await trusted_senders.updateOne(
+        { user_email: calling_user },
+        { $set: { senders_and_emails: senders_and_emails } }
+      );
+      return res.sendStatus(200);
+    }
+  } else {
+    senders_and_emails[sender_name] = [sender_email];
+    await trusted_senders.updateOne(
+      { user_email: calling_user },
+      { $set: { senders_and_emails: senders_and_emails } }
+    );
+    return res.sendStatus(200);
+  }
+});
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //index 1 because it's BEARER then token in that header

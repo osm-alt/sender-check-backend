@@ -48,6 +48,32 @@ router.post("/users", async (req, res) => {
       return res.status(400).send("User already exists");
     }
     await users.insertOne(user);
+
+    //create empty lists for the new user
+    const users_with_access = database.collection("users_with_access");
+    const users_with_access_template = {
+      list_owner: user.user_email,
+      users_with_access: [],
+    };
+    await users_with_access.insertOne(users_with_access_template);
+
+    const trusted_senders = database.collection("trusted_senders");
+    const trusted_senders_template = {
+      user_email: user.user_email,
+      senders_and_emails: {},
+    };
+    await trusted_senders.insertOne(trusted_senders_template);
+    const untrusted_senders = database.collection("untrusted_senders");
+    await untrusted_senders.insertOne(trusted_senders_template);
+    const trusted_domains_template = {
+      user_email: user.user_email,
+      domains: [],
+    };
+    const trusted_domains = database.collection("trusted_domains");
+    await trusted_domains.insertOne(trusted_domains_template);
+    const untrusted_domains = database.collection("untrusted_domains");
+    await untrusted_domains.insertOne(trusted_domains_template);
+
     res.status(201).send();
   } catch {
     res.status(500).send();
