@@ -243,6 +243,154 @@ app.delete("/trusted_senders", authenticateToken, async (req, res) => {
   }
 });
 
+//------------------------------------------------------//
+
+//read trusted senders of a particular list
+app.get("/untrusted_senders", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      list_owner: Joi.string().required().email().max(100), //owner of the list of trusted senders
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+    const list_owner = req.body.list_owner;
+
+    const users = database.collection("users");
+    let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user
+    if (result == null) {
+      return res.sendStatus(404);
+    }
+
+    if (list_owner !== calling_user) {
+      const users_with_access = database.collection("users_with_access");
+      result = await users_with_access.findOne({
+        list_owner: list_owner,
+        users_with_access: calling_user, //the calling user is in the users_with_access array
+      });
+      if (result == null) {
+        return res.status(401).send("You do not have access to this list"); //unauthorized
+      }
+    }
+
+    const untrusted_senders = database.collection("untrusted_senders");
+    result = await untrusted_senders.findOne({
+      user_email: list_owner,
+    });
+
+    if (result != null) {
+      return res.status(200).json(result.senders_and_emails);
+    }
+
+    return res.sendStatus(500);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//add a trusted senders to your list
+app.post("/untrusted_senders", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
+      sender_email: Joi.string().required().email().max(100),
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const untrusted_senders = database.collection("untrusted_senders");
+
+    let result = await untrusted_senders.findOne({ user_email: calling_user });
+
+    if (result == null) {
+      return res.sendStatus(400);
+    }
+
+    const sender_name = xss(req.body.sender_name);
+    const sender_email = xss(req.body.sender_email);
+
+    let senders_and_emails = result.senders_and_emails;
+
+    if (senders_and_emails[sender_name]) {
+      if (senders_and_emails[sender_name].includes(sender_email)) {
+        return res.status(400).send("The email for that sender already exists");
+      } else {
+        senders_and_emails[sender_name].push(sender_email);
+        await untrusted_senders.updateOne(
+          { user_email: calling_user },
+          { $set: { senders_and_emails: senders_and_emails } }
+        );
+        return res.sendStatus(200);
+      }
+    } else {
+      senders_and_emails[sender_name] = [sender_email];
+      await untrusted_senders.updateOne(
+        { user_email: calling_user },
+        { $set: { senders_and_emails: senders_and_emails } }
+      );
+      return res.sendStatus(200);
+    }
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//remove a sender to your trusted senders list
+app.delete("/untrusted_senders", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
+      sender_email: Joi.string().required().email().max(100),
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const untrusted_senders = database.collection("untrusted_senders");
+
+    let result = await untrusted_senders.findOne({ user_email: calling_user });
+
+    if (result == null) {
+      return res.sendStatus(400);
+    }
+
+    const sender_name = xss(req.body.sender_name);
+    const sender_email = xss(req.body.sender_email);
+
+    let senders_and_emails = result.senders_and_emails;
+
+    if (senders_and_emails[sender_name]) {
+      let sender_index = senders_and_emails[sender_name].indexOf(sender_email);
+      if (sender_index != -1) {
+        senders_and_emails[sender_name].splice(sender_index, 1);
+        if (senders_and_emails[sender_name].length == 0) {
+          delete senders_and_emails[sender_name];
+        }
+        await untrusted_senders.updateOne(
+          { user_email: calling_user },
+          { $set: { senders_and_emails: senders_and_emails } }
+        );
+        return res.sendStatus(200);
+      }
+    }
+    return res.sendStatus(404);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//------------------------------------------------------//
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //index 1 because it's BEARER then token in that header
