@@ -82,36 +82,42 @@ router.post("/users", async (req, res) => {
 
 //Login
 router.post("/users/login", async (req, res) => {
-  //schema for expected input and validation
-  const schema = Joi.object({
-    user_email: Joi.string().email().required(),
-    password: Joi.string().required().min(5).max(50),
-  });
-
-  if (!validateSchema(schema, req, res)) {
-    return;
-  }
-
-  const users = database.collection("users");
-  const user = await users.findOne({
-    user_email: req.body.user_email,
-  });
-
-  if (user == null) {
-    return res.status(400).send("Incorrect email or password");
-  }
   try {
-    if (await bcrypt.compare(req.body.password, user.password)) {
-      const accessToken = generateAccessToken({ user_email: user.user_email });
-      const refreshToken = jwt.sign(
-        user.user_email,
-        process.env.REFRESH_TOKEN_SECRET
-      );
-      const refresh_tokens = database.collection("refresh_tokens");
-      await refresh_tokens.insertOne({ refresh_token: refreshToken });
-      res.json({ access_token: accessToken, refresh_token: refreshToken });
-    } else {
-      res.status(400).send("Incorrect email or password");
+    //schema for expected input and validation
+    const schema = Joi.object({
+      user_email: Joi.string().email().required(),
+      password: Joi.string().required().min(5).max(50),
+    });
+
+    if (!validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const users = database.collection("users");
+    const user = await users.findOne({
+      user_email: req.body.user_email,
+    });
+
+    if (user == null) {
+      return res.status(400).send("Incorrect email or password");
+    }
+    try {
+      if (await bcrypt.compare(req.body.password, user.password)) {
+        const accessToken = generateAccessToken({
+          user_email: user.user_email,
+        });
+        const refreshToken = jwt.sign(
+          user.user_email,
+          process.env.REFRESH_TOKEN_SECRET
+        );
+        const refresh_tokens = database.collection("refresh_tokens");
+        await refresh_tokens.insertOne({ refresh_token: refreshToken });
+        res.json({ access_token: accessToken, refresh_token: refreshToken });
+      } else {
+        res.status(400).send("Incorrect email or password");
+      }
+    } catch {
+      res.status(500).send();
     }
   } catch {
     res.status(500).send();
@@ -119,43 +125,53 @@ router.post("/users/login", async (req, res) => {
 });
 
 router.post("/token", async (req, res) => {
-  //schema for expected input and validation
-  const schema = Joi.object({
-    refresh_token: Joi.string().required(),
-  });
+  try {
+    //schema for expected input and validation
+    const schema = Joi.object({
+      refresh_token: Joi.string().required(),
+    });
 
-  if (!validateSchema(schema, req, res)) {
-    return;
-  }
-  const refreshToken = req.body.refresh_token;
-  if (refreshToken == null) return res.sendStatus(401);
-
-  const refresh_tokens = database.collection("refresh_tokens");
-  const result = await refresh_tokens.findOne({ refresh_token: refreshToken });
-  if (result == null) return res.sendStatus(403);
-  jwt.verify(
-    refreshToken,
-    process.env.REFRESH_TOKEN_SECRET,
-    (err, user_email) => {
-      if (err) return res.sendStatus(403);
-      const accessToken = generateAccessToken({ user_email: user_email });
-      res.json({ access_token: accessToken });
+    if (!validateSchema(schema, req, res)) {
+      return;
     }
-  );
+    const refreshToken = req.body.refresh_token;
+    if (refreshToken == null) return res.sendStatus(401);
+
+    const refresh_tokens = database.collection("refresh_tokens");
+    const result = await refresh_tokens.findOne({
+      refresh_token: refreshToken,
+    });
+    if (result == null) return res.sendStatus(403);
+    jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET,
+      (err, user_email) => {
+        if (err) return res.sendStatus(403);
+        const accessToken = generateAccessToken({ user_email: user_email });
+        res.json({ access_token: accessToken });
+      }
+    );
+  } catch {
+    res.status(500).send();
+  }
 });
 
 router.delete("/logout", async (req, res) => {
-  const schema = Joi.object({
-    refresh_token: Joi.string().required(),
-  });
+  try {
+    const schema = Joi.object({
+      refresh_token: Joi.string().required(),
+    });
 
-  if (!validateSchema(schema, req, res)) {
-    return;
+    if (!validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const refresh_tokens = database.collection("refresh_tokens");
+    await refresh_tokens.deleteOne({ refresh_token: req.body.refresh_token });
+    res.sendStatus(204);
+  } catch {
+    res.status(500).send();
   }
-
-  const refresh_tokens = database.collection("refresh_tokens");
-  await refresh_tokens.deleteOne({ refresh_token: req.body.refresh_token });
-  res.sendStatus(204);
 });
 
 function validateSchema(schema, req, res) {
