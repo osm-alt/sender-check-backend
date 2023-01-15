@@ -641,6 +641,117 @@ app.delete("/untrusted_domains", authenticateToken, async (req, res) => {
 
 //------------------------------------------------------//
 
+//read list of users with access to your lists
+app.get("/users_with_access", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({});
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const users = database.collection("users");
+    let result = await users.findOne({ user_email: calling_user }); //check if the list owner is an actual user
+    if (result == null) {
+      return res.sendStatus(404);
+    }
+
+    const users_with_access = database.collection("users_with_access");
+    result = await users_with_access.findOne({
+      list_owner: calling_user,
+    });
+
+    if (result != null) {
+      return res.status(200).json(result.users_with_access);
+    }
+
+    return res.sendStatus(500);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//add a user to your list of users with (read) access to your lists
+app.post("/users_with_access", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      user_email: Joi.string().required().email().max(100), //user you want to give access
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const users_with_access = database.collection("users_with_access");
+
+    const user_email = xss(req.body.user_email);
+
+    let result = await users_with_access.findOne({
+      list_owner: calling_user,
+    });
+
+    let users_with_access_array = result.users_with_access;
+
+    if (users_with_access_array.includes(user_email)) {
+      return res.status(400).send("That user already has access");
+    } else {
+      users_with_access_array.push(user_email);
+      await users_with_access.updateOne(
+        { list_owner: calling_user },
+        { $set: { users_with_access: users_with_access_array } }
+      );
+      return res.sendStatus(200);
+    }
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//remove a users from your list of users with access
+app.delete("/users_with_access", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      user_email: Joi.string().required().email().max(100), //user you want to give access
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const users_with_access = database.collection("users_with_access");
+
+    const user_email = xss(req.body.user_email);
+
+    let result = await users_with_access.findOne({
+      list_owner: calling_user,
+    });
+
+    let users_with_access_array = result.users_with_access;
+
+    let user_index = users_with_access_array.indexOf(user_email);
+    if (user_index != -1) {
+      users_with_access_array.splice(user_index, 1);
+      await users_with_access.updateOne(
+        { list_owner: calling_user },
+        { $set: { users_with_access: users_with_access_array } }
+      );
+      return res.sendStatus(200);
+    }
+
+    return res.sendStatus(404);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//------------------------------------------------------//
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //index 1 because it's BEARER then token in that header
