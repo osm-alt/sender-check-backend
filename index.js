@@ -516,6 +516,131 @@ app.delete("/trusted_domains", authenticateToken, async (req, res) => {
 
 //------------------------------------------------------//
 
+//read untrusted domains of a particular list
+app.get("/untrusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      list_owner: Joi.string().required().email().max(100), //owner of the list of untrusted domains
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+    const list_owner = req.body.list_owner;
+
+    const users = database.collection("users");
+    let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user
+    if (result == null) {
+      return res.sendStatus(404);
+    }
+
+    if (list_owner !== calling_user) {
+      const users_with_access = database.collection("users_with_access");
+      result = await users_with_access.findOne({
+        list_owner: list_owner,
+        users_with_access: calling_user, //the calling user is in the users_with_access array
+      });
+      if (result == null) {
+        return res.status(401).send("You do not have access to this list"); //unauthorized
+      }
+    }
+
+    const untrusted_domains = database.collection("untrusted_domains");
+    result = await untrusted_domains.findOne({
+      user_email: list_owner,
+    });
+
+    if (result != null) {
+      return res.status(200).json(result.domains);
+    }
+
+    return res.sendStatus(500);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//add an untrusted domain to your list
+app.post("/untrusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      domain: Joi.string().required().domain().max(100), //to check if a specific sender is trusted
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const untrusted_domains = database.collection("untrusted_domains");
+
+    const domain = xss(req.body.domain);
+
+    let result = await untrusted_domains.findOne({
+      user_email: calling_user,
+    });
+
+    let domains = result.domains;
+
+    if (domains.includes(domain)) {
+      return res.status(400).send("That domain already exists");
+    } else {
+      domains.push(domain);
+      await untrusted_domains.updateOne(
+        { user_email: calling_user },
+        { $set: { domains: domains } }
+      );
+      return res.sendStatus(200);
+    }
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//remove a domain from your untrusted domains list
+app.delete("/untrusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      domain: Joi.string().required().domain().max(100), //to check if a specific sender is trusted
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const untrusted_domains = database.collection("untrusted_domains");
+
+    const domain = xss(req.body.domain);
+
+    let result = await untrusted_domains.findOne({
+      user_email: calling_user,
+    });
+
+    let domains = result.domains;
+
+    let domain_index = domains.indexOf(domain);
+    if (domain_index != -1) {
+      domains.splice(domain_index, 1);
+      await untrusted_domains.updateOne(
+        { user_email: calling_user },
+        { $set: { domains: domains } }
+      );
+      return res.sendStatus(200);
+    }
+
+    return res.sendStatus(404);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//------------------------------------------------------//
+
 function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //index 1 because it's BEARER then token in that header
