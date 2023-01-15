@@ -74,9 +74,9 @@ router.post("/users", async (req, res) => {
     const untrusted_domains = database.collection("untrusted_domains");
     await untrusted_domains.insertOne(trusted_domains_template);
 
-    res.status(201).send();
+    return res.status(201).send();
   } catch {
-    res.status(500).send();
+    return res.status(500).send();
   }
 });
 
@@ -112,15 +112,18 @@ router.post("/users/login", async (req, res) => {
         );
         const refresh_tokens = database.collection("refresh_tokens");
         await refresh_tokens.insertOne({ refresh_token: refreshToken });
-        res.json({ access_token: accessToken, refresh_token: refreshToken });
+        return res.json({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
       } else {
-        res.status(400).send("Incorrect email or password");
+        return res.status(400).send("Incorrect email or password");
       }
     } catch {
-      res.status(500).send();
+      return res.status(500).send();
     }
   } catch {
-    res.status(500).send();
+    return res.status(500).send();
   }
 });
 
@@ -148,11 +151,11 @@ router.post("/token", async (req, res) => {
       (err, user_email) => {
         if (err) return res.sendStatus(403);
         const accessToken = generateAccessToken({ user_email: user_email });
-        res.json({ access_token: accessToken });
+        return res.json({ access_token: accessToken });
       }
     );
   } catch {
-    res.status(500).send();
+    return res.status(500).send();
   }
 });
 
@@ -168,9 +171,9 @@ router.delete("/logout", async (req, res) => {
 
     const refresh_tokens = database.collection("refresh_tokens");
     await refresh_tokens.deleteOne({ refresh_token: req.body.refresh_token });
-    res.sendStatus(204);
+    return res.sendStatus(204);
   } catch {
-    res.status(500).send();
+    return res.status(500).send();
   }
 });
 

@@ -23,7 +23,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     const schema = Joi.object({
       sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
       sender_email: Joi.string().required().email().max(100),
-      list_owner: Joi.string().required().email().max(100), //owner of the list of trusted senders
+      list_owner: Joi.string().required().email().max(100), //owner of the lists of senders and domains
     });
 
     if (!auth.validateSchema(schema, req, res)) {
@@ -196,7 +196,7 @@ app.post("/trusted_senders", authenticateToken, async (req, res) => {
   }
 });
 
-//remove a sender to your trusted senders list
+//remove a sender from your trusted senders list
 app.delete("/trusted_senders", authenticateToken, async (req, res) => {
   try {
     const schema = Joi.object({
@@ -245,11 +245,11 @@ app.delete("/trusted_senders", authenticateToken, async (req, res) => {
 
 //------------------------------------------------------//
 
-//read trusted senders of a particular list
+//read untrusted senders of a particular list
 app.get("/untrusted_senders", authenticateToken, async (req, res) => {
   try {
     const schema = Joi.object({
-      list_owner: Joi.string().required().email().max(100), //owner of the list of trusted senders
+      list_owner: Joi.string().required().email().max(100), //owner of the list of non-trusted senders
     });
 
     if (!auth.validateSchema(schema, req, res)) {
@@ -291,11 +291,11 @@ app.get("/untrusted_senders", authenticateToken, async (req, res) => {
   }
 });
 
-//add a trusted senders to your list
+//add an untrusted sender to your list
 app.post("/untrusted_senders", authenticateToken, async (req, res) => {
   try {
     const schema = Joi.object({
-      sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
+      sender_name: Joi.string().required().max(100), //to check if a specific sender is not trusted
       sender_email: Joi.string().required().email().max(100),
     });
 
@@ -342,11 +342,11 @@ app.post("/untrusted_senders", authenticateToken, async (req, res) => {
   }
 });
 
-//remove a sender to your trusted senders list
+//remove a sender from your untrusted senders list
 app.delete("/untrusted_senders", authenticateToken, async (req, res) => {
   try {
     const schema = Joi.object({
-      sender_name: Joi.string().required().max(100), //to check if a specific sender is trusted
+      sender_name: Joi.string().required().max(100), //to check if a specific sender is not trusted
       sender_email: Joi.string().required().email().max(100),
     });
 
@@ -383,6 +383,131 @@ app.delete("/untrusted_senders", authenticateToken, async (req, res) => {
         return res.sendStatus(200);
       }
     }
+    return res.sendStatus(404);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//------------------------------------------------------//
+
+//read trusted domains of a particular list
+app.get("/trusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      list_owner: Joi.string().required().email().max(100), //owner of the list of trusted domains
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+    const list_owner = req.body.list_owner;
+
+    const users = database.collection("users");
+    let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user
+    if (result == null) {
+      return res.sendStatus(404);
+    }
+
+    if (list_owner !== calling_user) {
+      const users_with_access = database.collection("users_with_access");
+      result = await users_with_access.findOne({
+        list_owner: list_owner,
+        users_with_access: calling_user, //the calling user is in the users_with_access array
+      });
+      if (result == null) {
+        return res.status(401).send("You do not have access to this list"); //unauthorized
+      }
+    }
+
+    const trusted_domains = database.collection("trusted_domains");
+    result = await trusted_domains.findOne({
+      user_email: list_owner,
+    });
+
+    if (result != null) {
+      return res.status(200).json(result.domains);
+    }
+
+    return res.sendStatus(500);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//add a trusted domain to your list
+app.post("/trusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      domain: Joi.string().required().domain().max(100), //to check if a specific sender is trusted
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const trusted_domains = database.collection("trusted_domains");
+
+    const domain = xss(req.body.domain);
+
+    let result = await trusted_domains.findOne({
+      user_email: calling_user,
+    });
+
+    let domains = result.domains;
+
+    if (domains.includes(domain)) {
+      return res.status(400).send("That domain already exists");
+    } else {
+      domains.push(domain);
+      await trusted_domains.updateOne(
+        { user_email: calling_user },
+        { $set: { domains: domains } }
+      );
+      return res.sendStatus(200);
+    }
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//remove a domain from your trusted domains list
+app.delete("/trusted_domains", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({
+      domain: Joi.string().required().domain().max(100), //to check if a specific sender is trusted
+    });
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const trusted_domains = database.collection("trusted_domains");
+
+    const domain = xss(req.body.domain);
+
+    let result = await trusted_domains.findOne({
+      user_email: calling_user,
+    });
+
+    let domains = result.domains;
+
+    let domain_index = domains.indexOf(domain);
+    if (domain_index != -1) {
+      domains.splice(domain_index, 1);
+      await trusted_domains.updateOne(
+        { user_email: calling_user },
+        { $set: { domains: domains } }
+      );
+      return res.sendStatus(200);
+    }
+
     return res.sendStatus(404);
   } catch {
     res.sendStatus(500);
