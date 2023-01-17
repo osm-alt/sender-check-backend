@@ -30,6 +30,8 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       return;
     }
 
+    let found = false;
+
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
     const list_owner = req.body.list_owner;
 
@@ -44,7 +46,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       }
     }
 
-    const sender_name = req.body.sender_name.replace(/./g, "(dot)");
+    const sender_name = req.body.sender_name.replace(/\./g, "(dot)");
     const sender_email = req.body.sender_email;
     const sender_email_domain = sender_email.substring(
       sender_email.lastIndexOf("@") + 1
@@ -58,6 +60,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     });
 
     if (result != null) {
+      found = true;
       if (result.senders_and_emails[sender_name].includes(sender_email)) {
         return res.status(200).send("Trusted");
       }
@@ -70,6 +73,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     });
 
     if (result != null) {
+      found = true;
       if (result.senders_and_emails[sender_name].includes(sender_email)) {
         return res.status(200).send("Untrusted");
       }
@@ -93,6 +97,11 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       return res.status(200).send("Untrusted");
     }
 
+    if (found) {
+      return res
+        .status(404)
+        .send("Found sender with that name but not same email");
+    }
     return res.sendStatus(404);
   } catch {
     res.sendStatus(500);
@@ -167,7 +176,7 @@ app.post("/trusted_senders", authenticateToken, async (req, res) => {
       return res.sendStatus(400);
     }
 
-    const sender_name = xss(req.body.sender_name.replace(/./g, "(dot)"));
+    const sender_name = xss(req.body.sender_name.replace(/\./g, "(dot)"));
     const sender_email = xss(req.body.sender_email);
 
     let senders_and_emails = result.senders_and_emails;
@@ -218,7 +227,7 @@ app.delete("/trusted_senders", authenticateToken, async (req, res) => {
       return res.sendStatus(400);
     }
 
-    const sender_name = xss(req.body.sender_name.replace(/./g, "(dot)"));
+    const sender_name = xss(req.body.sender_name.replace(/\./g, "(dot)"));
     const sender_email = xss(req.body.sender_email);
 
     let senders_and_emails = result.senders_and_emails;
@@ -313,7 +322,7 @@ app.post("/untrusted_senders", authenticateToken, async (req, res) => {
       return res.sendStatus(400);
     }
 
-    const sender_name = xss(req.body.sender_name.replace(/./g, "(dot)"));
+    const sender_name = xss(req.body.sender_name.replace(/\./g, "(dot)"));
     const sender_email = xss(req.body.sender_email);
 
     let senders_and_emails = result.senders_and_emails;
@@ -364,7 +373,7 @@ app.delete("/untrusted_senders", authenticateToken, async (req, res) => {
       return res.sendStatus(400);
     }
 
-    const sender_name = xss(req.body.sender_name.replace(/./g, "(dot)"));
+    const sender_name = xss(req.body.sender_name.replace(/\./g, "(dot)"));
     const sender_email = xss(req.body.sender_email);
 
     let senders_and_emails = result.senders_and_emails;
