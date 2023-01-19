@@ -45,7 +45,7 @@ router.post("/users", async (req, res) => {
     const users = database.collection("users");
     const result = await users.findOne({ user_email: user.user_email });
     if (result != null) {
-      return res.status(400).send("User already exists");
+      return res.status(400).json({ message: "User already exists" });
     }
     await users.insertOne(user);
 
@@ -99,8 +99,9 @@ router.post("/users/login", async (req, res) => {
     });
 
     if (user == null) {
-      return res.status(400).send("Incorrect email or password");
+      return res.status(400).json({ message: "Incorrect email or password" });
     }
+
     try {
       if (await bcrypt.compare(req.body.password, user.password)) {
         const accessToken = generateAccessToken({
@@ -117,7 +118,7 @@ router.post("/users/login", async (req, res) => {
           refresh_token: refreshToken,
         });
       } else {
-        return res.status(400).send("Incorrect email or password");
+        return res.status(400).json({ message: "Incorrect email or password" });
       }
     } catch {
       return res.status(500).send();

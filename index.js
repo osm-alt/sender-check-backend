@@ -45,7 +45,9 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
         users_with_access: calling_user, //the calling user is in the users_with_access array
       });
       if (result == null) {
-        return res.status(401).send("You do not have access to this list"); //unauthorized
+        return res
+          .status(401)
+          .json({ message: "You do not have access to this list" }); //unauthorized
       }
     }
 
@@ -65,7 +67,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     if (result != null) {
       found = true;
       if (result.senders_and_emails[sender_name].includes(sender_email)) {
-        return res.status(200).send("Trusted");
+        return res.status(200).json({ message: "Trusted" });
       }
     }
 
@@ -78,7 +80,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     if (result != null) {
       found = true;
       if (result.senders_and_emails[sender_name].includes(sender_email)) {
-        return res.status(200).send("Untrusted");
+        return res.status(200).json({ message: "Untrusted" });
       }
     }
 
@@ -88,7 +90,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       domains: [sender_email_domain],
     });
     if (result != null) {
-      return res.status(200).send("Trusted");
+      return res.status(200).json({ message: "Trusted" });
     }
 
     const untrusted_domains = database.collection("untrusted_domains");
@@ -97,13 +99,13 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       domains: [sender_email_domain],
     });
     if (result != null) {
-      return res.status(200).send("Untrusted");
+      return res.status(200).json({ message: "Untrusted" });
     }
 
     if (found) {
       return res
         .status(404)
-        .send("Found sender with that name but not same email");
+        .json({ message: "Found sender with that name but not same email" });
     }
     return res.sendStatus(404);
   } catch {
@@ -138,7 +140,9 @@ app.get("/trusted_senders", authenticateToken, async (req, res) => {
         users_with_access: calling_user, //the calling user is in the users_with_access array
       });
       if (result == null) {
-        return res.status(401).send("You do not have access to this list"); //unauthorized
+        return res
+          .status(401)
+          .json({ message: "You do not have access to this list" }); //unauthorized
       }
     }
 
@@ -186,7 +190,9 @@ app.post("/trusted_senders", authenticateToken, async (req, res) => {
 
     if (senders_and_emails[sender_name]) {
       if (senders_and_emails[sender_name].includes(sender_email)) {
-        return res.status(400).send("The email for that sender already exists");
+        return res
+          .status(400)
+          .json({ message: "The email for that sender already exists" });
       } else {
         senders_and_emails[sender_name].push(sender_email);
         await trusted_senders.updateOne(
@@ -284,7 +290,9 @@ app.get("/untrusted_senders", authenticateToken, async (req, res) => {
         users_with_access: calling_user, //the calling user is in the users_with_access array
       });
       if (result == null) {
-        return res.status(401).send("You do not have access to this list"); //unauthorized
+        return res
+          .status(401)
+          .json({ message: "You do not have access to this list" }); //unauthorized
       }
     }
 
@@ -332,7 +340,9 @@ app.post("/untrusted_senders", authenticateToken, async (req, res) => {
 
     if (senders_and_emails[sender_name]) {
       if (senders_and_emails[sender_name].includes(sender_email)) {
-        return res.status(400).send("The email for that sender already exists");
+        return res
+          .status(400)
+          .json({ message: "The email for that sender already exists" });
       } else {
         senders_and_emails[sender_name].push(sender_email);
         await untrusted_senders.updateOne(
@@ -430,7 +440,9 @@ app.get("/trusted_domains", authenticateToken, async (req, res) => {
         users_with_access: calling_user, //the calling user is in the users_with_access array
       });
       if (result == null) {
-        return res.status(401).send("You do not have access to this list"); //unauthorized
+        return res
+          .status(401)
+          .json({ message: "You do not have access to this list" }); //unauthorized
       }
     }
 
@@ -473,7 +485,7 @@ app.post("/trusted_domains", authenticateToken, async (req, res) => {
     let domains = result.domains;
 
     if (domains.includes(domain)) {
-      return res.status(400).send("That domain already exists");
+      return res.status(400).json({ message: "That domain already exists" });
     } else {
       domains.push(domain);
       await trusted_domains.updateOne(
@@ -555,7 +567,9 @@ app.get("/untrusted_domains", authenticateToken, async (req, res) => {
         users_with_access: calling_user, //the calling user is in the users_with_access array
       });
       if (result == null) {
-        return res.status(401).send("You do not have access to this list"); //unauthorized
+        return res
+          .status(401)
+          .json({ message: "You do not have access to this list" }); //unauthorized
       }
     }
 
@@ -598,7 +612,7 @@ app.post("/untrusted_domains", authenticateToken, async (req, res) => {
     let domains = result.domains;
 
     if (domains.includes(domain)) {
-      return res.status(400).send("That domain already exists");
+      return res.status(400).json({ message: "That domain already exists" });
     } else {
       domains.push(domain);
       await untrusted_domains.updateOne(
@@ -709,7 +723,7 @@ app.post("/users_with_access", authenticateToken, async (req, res) => {
     let users_with_access_array = result.users_with_access;
 
     if (users_with_access_array.includes(user_email)) {
-      return res.status(400).send("That user already has access");
+      return res.status(400).json({ message: "That user already has access" });
     } else {
       users_with_access_array.push(user_email);
       await users_with_access.updateOne(
