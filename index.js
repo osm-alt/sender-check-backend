@@ -4,6 +4,9 @@ const app = express();
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const xss = require("xss");
+var cors = require("cors");
+
+app.use(cors());
 
 app.use(express.json());
 
