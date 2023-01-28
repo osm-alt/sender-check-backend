@@ -678,12 +678,6 @@ app.get("/users_with_access", authenticateToken, async (req, res) => {
 
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
 
-    const users = database.collection("users");
-    let result = await users.findOne({ user_email: calling_user }); //check if the list owner is an actual user
-    if (result == null) {
-      return res.sendStatus(404);
-    }
-
     const users_with_access = database.collection("users_with_access");
     result = await users_with_access.findOne({
       list_owner: calling_user,
@@ -771,6 +765,34 @@ app.delete("/users_with_access", authenticateToken, async (req, res) => {
     }
 
     return res.sendStatus(404);
+  } catch {
+    res.sendStatus(500);
+  }
+});
+
+//------------------------------------------------------//
+
+//read list of users with access to your lists
+app.get("/accessible_lists", authenticateToken, async (req, res) => {
+  try {
+    const schema = Joi.object({});
+
+    if (!auth.validateSchema(schema, req, res)) {
+      return;
+    }
+
+    const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
+
+    const accessible_lists = database.collection("accessible_lists");
+    result = await accessible_lists.findOne({
+      user_email: calling_user,
+    });
+
+    if (result != null) {
+      return res.status(200).json(result.list_owners);
+    }
+
+    return res.sendStatus(500);
   } catch {
     res.sendStatus(500);
   }

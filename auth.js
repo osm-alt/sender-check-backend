@@ -75,6 +75,13 @@ router.post("/users", async (req, res) => {
     const untrusted_domains = database.collection("untrusted_domains");
     await untrusted_domains.insertOne(trusted_domains_template);
 
+    const accessible_lists_template = {
+      user_email: user.user_email,
+      list_owners: [],
+    };
+    const accessible_lists = database.collection("accessible_lists");
+    await accessible_lists.insertOne(accessible_lists_template);
+
     return res.status(201).send();
   } catch {
     return res.status(500).send();
