@@ -115,6 +115,7 @@ router.post("/users/login", async (req, res) => {
         const refresh_tokens = database.collection("refresh_tokens");
         await refresh_tokens.insertOne({ refresh_token: refreshToken });
         return res.json({
+          user_name: user.first_name + " " + user.last_name,
           access_token: accessToken,
           refresh_token: refreshToken,
         });
