@@ -724,6 +724,27 @@ app.post("/users_with_access", authenticateToken, async (req, res) => {
         { list_owner: calling_user },
         { $set: { users_with_access: users_with_access_array } }
       );
+      const user_accessible_lists = database.collection("accessible_lists"); //the user's (the one we're giving access) accessible lists
+
+      result = await user_accessible_lists.findOne({
+        user_email: user_email,
+      });
+
+      if (result) {
+        let list_owners_array = result.list_owners;
+        if (list_owners_array.includes(calling_user)) {
+          return res
+            .status(400)
+            .json({ message: "That user already has access" });
+        } else {
+          list_owners_array.push(calling_user);
+          await user_accessible_lists.updateOne(
+            { user_email: user_email },
+            { $set: { list_owners: list_owners_array } }
+          );
+        }
+      }
+
       return res.sendStatus(200);
     }
   } catch {
@@ -761,7 +782,26 @@ app.delete("/users_with_access", authenticateToken, async (req, res) => {
         { list_owner: calling_user },
         { $set: { users_with_access: users_with_access_array } }
       );
-      return res.sendStatus(200);
+
+      const user_accessible_lists = database.collection("accessible_lists"); //the user's (the one we gave access) accessible lists
+
+      result = await user_accessible_lists.findOne({
+        user_email: user_email,
+      });
+
+      if (result) {
+        let list_owners_array = result.list_owners;
+
+        let list_owner_index = list_owners_array.indexOf(calling_user);
+        if (list_owner_index != -1) {
+          list_owners_array.splice(list_owner_index, 1);
+          await user_accessible_lists.updateOne(
+            { user_email: user_email },
+            { $set: { list_owners: list_owners_array } }
+          );
+          return res.sendStatus(200);
+        }
+      }
     }
 
     return res.sendStatus(404);
