@@ -120,12 +120,16 @@ app.get("/trusted_senders", authenticateToken, async (req, res) => {
       list_owner: Joi.string().required().email().max(100), //owner of the list of trusted senders
     });
 
-    if (!auth.validateSchema(schema, req, res)) {
+    if (!auth.validateSchema(schema, req, res, true)) {
       return;
     }
 
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
-    const list_owner = req.body.list_owner;
+    const list_owner = req.query.list_owner;
+
+    if (!list_owner) {
+      return res.sendStatus(400);
+    }
 
     const users = database.collection("users");
     let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user

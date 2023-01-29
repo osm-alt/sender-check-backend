@@ -188,8 +188,13 @@ router.delete("/logout", async (req, res) => {
   }
 });
 
-function validateSchema(schema, req, res) {
-  const result = schema.validate(req.body);
+function validateSchema(schema, req, res, queryRequest) {
+  let result;
+  if (queryRequest) {
+    result = schema.validate(req.query);
+  } else {
+    result = schema.validate(req.body);
+  }
 
   if (result.error) {
     res.status(400).send(result.error);
