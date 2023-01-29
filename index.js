@@ -832,7 +832,7 @@ app.get("/accessible_lists", authenticateToken, async (req, res) => {
       return res.status(200).json(result.list_owners);
     }
 
-    return res.sendStatus(500);
+    return res.sendStatus(404);
   } catch {
     res.sendStatus(500);
   }
