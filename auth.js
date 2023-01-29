@@ -123,6 +123,7 @@ router.post("/users/login", async (req, res) => {
         await refresh_tokens.insertOne({ refresh_token: refreshToken });
         return res.json({
           user_name: user.first_name + " " + user.last_name,
+          user_email: user.user_email,
           access_token: accessToken,
           refresh_token: refreshToken,
         });
