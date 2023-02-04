@@ -424,12 +424,12 @@ app.get("/trusted_domains", authenticateToken, async (req, res) => {
       list_owner: Joi.string().required().email().max(100), //owner of the list of trusted domains
     });
 
-    if (!auth.validateSchema(schema, req, res)) {
+    if (!auth.validateSchema(schema, req, res, true)) {
       return;
     }
 
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
-    const list_owner = req.body.list_owner;
+    const list_owner = req.query.list_owner;
 
     const users = database.collection("users");
     let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user
@@ -551,12 +551,12 @@ app.get("/untrusted_domains", authenticateToken, async (req, res) => {
       list_owner: Joi.string().required().email().max(100), //owner of the list of untrusted domains
     });
 
-    if (!auth.validateSchema(schema, req, res)) {
+    if (!auth.validateSchema(schema, req, res, true)) {
       return;
     }
 
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
-    const list_owner = req.body.list_owner;
+    const list_owner = req.query.list_owner;
 
     const users = database.collection("users");
     let result = await users.findOne({ user_email: list_owner }); //check if the list owner is an actual user
