@@ -197,7 +197,7 @@ function validateSchema(schema, req, res, queryRequest) {
   }
 
   if (result.error) {
-    res.status(400).send(result.error);
+    res.status(406).send(result.error);
     return false;
   }
   return true;

@@ -165,7 +165,7 @@ app.get("/trusted_senders", authenticateToken, async (req, res) => {
   }
 });
 
-//add a trusted senders to your list
+//add a trusted sender to your list
 app.post("/trusted_senders", authenticateToken, async (req, res) => {
   try {
     const schema = Joi.object({
@@ -195,7 +195,7 @@ app.post("/trusted_senders", authenticateToken, async (req, res) => {
     if (senders_and_emails[sender_name]) {
       if (senders_and_emails[sender_name].includes(sender_email)) {
         return res
-          .status(400)
+          .status(406)
           .json({ message: "The email for that sender already exists" });
       } else {
         senders_and_emails[sender_name].push(sender_email);
