@@ -489,7 +489,7 @@ app.post("/trusted_domains", authenticateToken, async (req, res) => {
     let domains = result.domains;
 
     if (domains.includes(domain)) {
-      return res.status(400).json({ message: "That domain already exists" });
+      return res.status(406).json({ message: "That domain already exists" });
     } else {
       domains.push(domain);
       await trusted_domains.updateOne(
@@ -616,7 +616,7 @@ app.post("/untrusted_domains", authenticateToken, async (req, res) => {
     let domains = result.domains;
 
     if (domains.includes(domain)) {
-      return res.status(400).json({ message: "That domain already exists" });
+      return res.status(406).json({ message: "That domain already exists" });
     } else {
       domains.push(domain);
       await untrusted_domains.updateOne(
@@ -850,7 +850,9 @@ function authenticateToken(req, res, next) {
   if (token == null) return res.sendStatus(401);
 
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    console.log(err);
+    if (err) {
+      console.log(err);
+    }
     if (err) return res.sendStatus(403);
     req.user = user;
     next();
