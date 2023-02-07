@@ -721,7 +721,7 @@ app.post("/users_with_access", authenticateToken, async (req, res) => {
     let users_with_access_array = result.users_with_access;
 
     if (users_with_access_array.includes(user_email)) {
-      return res.status(400).json({ message: "That user already has access" });
+      return res.status(406).json({ message: "That user already has access" });
     } else {
       users_with_access_array.push(user_email);
       await users_with_access.updateOne(
