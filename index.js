@@ -735,10 +735,7 @@ app.post("/users_with_access", authenticateToken, async (req, res) => {
       return res.status(406).json({ message: "That user already has access" });
     } else {
       users_with_access_array.push(user_email);
-      await users_with_access.updateOne(
-        { list_owner: calling_user },
-        { $set: { users_with_access: users_with_access_array } }
-      );
+
       const user_accessible_lists = database.collection("accessible_lists"); //the user's (the one we're giving access) accessible lists
 
       result = await user_accessible_lists.findOne({
@@ -758,7 +755,16 @@ app.post("/users_with_access", authenticateToken, async (req, res) => {
             { $set: { list_owners: list_owners_array } }
           );
         }
+      } else {
+        return res
+          .status(406)
+          .json({ message: "User has to have a SenderCheck account" });
       }
+
+      await users_with_access.updateOne(
+        { list_owner: calling_user },
+        { $set: { users_with_access: users_with_access_array } }
+      );
 
       return res.sendStatus(200);
     }
@@ -819,7 +825,7 @@ app.delete("/users_with_access", authenticateToken, async (req, res) => {
       }
     }
 
-    return res.sendStatus(404);
+    return res.status(406).send("User has to have a SenderCheck account");
   } catch {
     res.sendStatus(500);
   }
