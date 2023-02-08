@@ -28,7 +28,7 @@ router.post("/users", async (req, res) => {
       first_name: Joi.string().required().max(25),
       last_name: Joi.string().required().max(30),
       user_email: Joi.string().email().required().max(100),
-      password: Joi.string().required().min(5).max(50),
+      password: Joi.string().required().min(8).max(50),
       retype_password: Joi.ref("password"),
     });
 
@@ -94,7 +94,7 @@ router.post("/users/login", async (req, res) => {
     //schema for expected input and validation
     const schema = Joi.object({
       user_email: Joi.string().email().required(),
-      password: Joi.string().required().min(5).max(50),
+      password: Joi.string().required().min(8).max(50),
     });
 
     if (!validateSchema(schema, req, res)) {
