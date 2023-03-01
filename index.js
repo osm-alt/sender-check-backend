@@ -6,7 +6,10 @@ const jwt = require("jsonwebtoken");
 const xss = require("xss");
 var cors = require("cors");
 
-var whitelist = ["http://localhost:3000"];
+var whitelist = [
+  "http://localhost:3000",
+  "chrome-extension://gidhjndmngjgaabnlnjmeihlealghdnj",
+];
 var corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1 || !origin) {
