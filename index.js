@@ -102,7 +102,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     const trusted_domains = database.collection("trusted_domains");
     result = await trusted_domains.findOne({
       user_email: list_owner,
-      domains: [sender_email_domain],
+      domains: sender_email_domain,
     });
     if (result != null) {
       return res.status(200).json({ message: "Trusted" });
@@ -111,7 +111,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
     const untrusted_domains = database.collection("untrusted_domains");
     result = await untrusted_domains.findOne({
       user_email: list_owner,
-      domains: [sender_email_domain],
+      domains: sender_email_domain,
     });
     if (result != null) {
       return res.status(200).json({ message: "Untrusted" });
