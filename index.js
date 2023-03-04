@@ -9,6 +9,7 @@ var cors = require("cors");
 var whitelist = [
   "http://localhost:3000",
   "chrome-extension://gidhjndmngjgaabnlnjmeihlealghdnj",
+  "https://outlook.live.com",
 ];
 var corsOptions = {
   origin: function (origin, callback) {
@@ -43,14 +44,14 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       list_owner: Joi.string().required().email().max(100), //owner of the lists of senders and domains
     });
 
-    if (!auth.validateSchema(schema, req, res)) {
+    if (!auth.validateSchema(schema, req, res, true)) {
       return;
     }
 
     let found = false;
 
     const calling_user = req.user.user_email; //the user (email) who is making this HTTP call
-    const list_owner = req.body.list_owner;
+    const list_owner = req.query.list_owner;
 
     if (list_owner !== calling_user) {
       const users_with_access = database.collection("users_with_access");
@@ -65,8 +66,8 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
       }
     }
 
-    const sender_name = req.body.sender_name.replace(/\./g, "(dot)");
-    const sender_email = req.body.sender_email;
+    const sender_name = req.query.sender_name.replace(/\./g, "(dot)");
+    const sender_email = req.query.sender_email;
     const sender_email_domain = sender_email.substring(
       sender_email.lastIndexOf("@") + 1
     );
@@ -118,7 +119,7 @@ app.get("/check_sender", authenticateToken, async (req, res) => {
 
     if (found) {
       return res
-        .status(404)
+        .status(200)
         .json({ message: "Found sender with that name but not same email" });
     }
     return res.sendStatus(404);
