@@ -10,6 +10,7 @@ var whitelist = [
   "http://localhost:3000",
   "chrome-extension://gidhjndmngjgaabnlnjmeihlealghdnj",
   "https://outlook.live.com",
+  "https://outlook.office365.com"
 ];
 var corsOptions = {
   origin: function (origin, callback) {
